@@ -18,3 +18,36 @@ production-ready.
       and runs a policy check on every pull request
 - [ ] AWS Config rules, with automatic fixes for some violations
 - [ ] A table mapping each control to NIST 800-53
+
+## How to deploy
+
+### Prerequisites
+- Terraform 1.10 or later
+- AWS CLI v2, signed in with short-lived credentials (`aws login` or `aws configure sso`). No long-lived access keys.
+
+### 1. Bootstrap the state bucket (one time)
+```
+cd bootstrap
+terraform init
+terraform apply
+```
+This creates an encrypted, versioned S3 bucket with public access blocked. Its own state stays local, because the bucket has to exist before it can store state.
+
+### 2. Deploy the landing zone
+```
+cd landing-zone
+terraform init
+terraform plan
+terraform apply
+```
+State is stored in the S3 bucket with native S3 state locking (`use_lockfile = true`), so two applies can't run at the same time.
+
+### Tear down
+```
+cd landing-zone
+terraform destroy
+```
+The state bucket has `prevent_destroy` set and is meant to stay.
+
+### Design notes
+- The state bucket currently lives in the management account. Best practice is to keep the management account nearly empty, since Service Control Policies don't apply to it. This will move once a dedicated account exists.
